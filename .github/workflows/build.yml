@@ -12,30 +12,34 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Instalar Java
+      - name: Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '11'
 
-      - name: Instalar Flutter
+      - name: Configurar Flutter estable
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.10.6'
           channel: 'stable'
 
-      - name: Crear proyecto Flutter
+      - name: Construir aplicacion
         run: |
-          cd ..
-          flutter create --org com.pablo app_temp
+          mkdir app_temp
           cd app_temp
-          flutter pub add flutter_bluetooth_serial permission_handler
-          cp -r $GITHUB_WORKSPACE/lib/* lib/ || true
-          sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle
-          flutter build apk --release
+          flutter create --org com.pablo esp32_app
+          cd esp32_app
+          flutter pub add flutter_bluetooth_serial:0.4.0 permission_handler:10.4.5
+          cp -f $GITHUB_WORKSPACE/lib/main.dart lib/main.dart
+          
+          # Agregar permisos de Bluetooth al AndroidManifest
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.BLUETOOTH" />\n    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' android/app/src/main/AndroidManifest.xml
+          
+          flutter build apk --no-tree-shake-icons
           cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/Control_ESP32.apk
 
-      - name: Subir APK lista para descargar
+      - name: Subir APK terminada
         uses: actions/upload-artifact@v4
         with:
           name: Control_ESP32_APK
