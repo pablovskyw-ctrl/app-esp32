@@ -1,0 +1,42 @@
+name: Compilar APK ESP32
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Instalar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Crear proyecto Flutter
+        run: |
+          cd ..
+          flutter create --org com.pablo app_temp
+          cd app_temp
+          flutter pub add flutter_bluetooth_serial permission_handler
+          cp -r $GITHUB_WORKSPACE/lib/* lib/ || true
+          sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/Control_ESP32.apk
+
+      - name: Subir APK lista para descargar
+        uses: actions/upload-artifact@v4
+        with:
+          name: Control_ESP32_APK
+          path: Control_ESP32.apk
